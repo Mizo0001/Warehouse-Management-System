@@ -1,0 +1,209 @@
+﻿@page "/subcategories"
+@inject ISubCategoryService SubCategoryService
+@inject ICategoryService CategoryService
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@using Microsoft.AspNetCore.Components.Authorization
+@using System.Security.Claims
+@using System.Collections.Generic
+@using System.Threading.Tasks
+
+<h3>SubCategories</h3>
+
+<AuthorizeView>
+    <Authorized>
+        @if (currentView == ViewMode.List)
+        {
+            <button class="btn btn-success mb-3" @onclick="AddNewSubCategory">Add New SubCategory</button>
+
+            @if (subcategories == null)
+            {
+                <p><em>Loading...</em></p>
+            }
+            else
+            {
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>SubCategoryID</th>
+                            <th>SubCategoryName</th>
+                            <th>Category</th>
+                            <th>Active</th>
+                            <th>Inactive Date</th>
+                            <th>Create By</th>
+                            <th>Create Date</th>
+                            <th>Update By</th>
+                            <th>Update Date</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var subcategory in subcategories)
+                        {
+                            <tr>
+                                <td>@subcategory.SubCategoryId</td>
+                                <td>@subcategory.SubCategoryName</td>
+                                <td>@GetCategoryName(subcategory.CategoryId)</td>
+                                <td>@(subcategory.Active ? "Yes" : "No")</td>
+                                <td>@subcategory.InActiveDate?.ToString("yyyy-MM-dd")</td>
+                                <td>@subcategory.CreateBy</td>
+                                <td>@subcategory.CreateDate.ToString("yyyy-MM-dd")</td>
+                                <td>@subcategory.UpdateBy</td>
+                                <td>@subcategory.UpdateDate.ToString("yyyy-MM-dd")</td>
+                                <td>
+                                    <button class="btn btn-primary btn-sm" @onclick="() => EditSubCategory(subcategory.SubCategoryId)">Edit</button>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            }
+        }
+
+        @if (currentView == ViewMode.Add)
+        {
+            <h4>Add New SubCategory</h4>
+
+            <div class="form-group">
+                <label for="subcategoryName">SubCategory Name:</label>
+                <input class="form-control" id="subcategoryName" @bind="currentSubCategory.SubCategoryName" />
+            </div>
+            <div class="form-group">
+                <label for="categoryDropdown">Category:</label>
+                <select class="form-control" id="categoryDropdown" @bind="currentSubCategory.CategoryId">
+                    @if (activeCategories != null)
+                    {
+                        @foreach (var category in activeCategories)
+                        {
+                            <option value="@category.CategoryId">@category.CategoryName</option>
+                        }
+                    }
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="active">Active:</label>
+                <input type="checkbox" id="active" @bind="currentSubCategory.Active" />
+            </div>
+            <div class="form-group">
+                <button class="btn btn-primary" @onclick="SaveChanges">Save</button>
+                <button class="btn btn-secondary ml-2" @onclick="Cancel">Cancel</button>
+            </div>
+        }
+        else if (currentView == ViewMode.Edit)
+        {
+            <h4>Edit SubCategory</h4>
+
+            <div class="form-group">
+                <label for="subcategoryName">SubCategory Name:</label>
+                <input class="form-control" id="subcategoryName" @bind="currentSubCategory.SubCategoryName" />
+            </div>
+            <div class="form-group">
+                <label for="categoryDropdown">Category:</label>
+                <select class="form-control" id="categoryDropdown" @bind="currentSubCategory.CategoryId">
+                    @if (activeCategories != null)
+                    {
+                        @foreach (var category in activeCategories)
+                        {
+                            <option value="@category.CategoryId">@category.CategoryName</option>
+                        }
+                    }
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="active">Active:</label>
+                <input type="checkbox" id="active" @bind="currentSubCategory.Active" />
+            </div>
+            <div class="form-group">
+                <button class="btn btn-primary" @onclick="SaveChanges">Save</button>
+                <button class="btn btn-secondary ml-2" @onclick="Cancel">Cancel</button>
+            </div>
+        }
+    </Authorized>
+    <NotAuthorized>
+        <p>You must be logged in to access this page.</p>
+    </NotAuthorized>
+</AuthorizeView>
+
+@code {
+    private IEnumerable<SubCategories> subcategories;
+    private IEnumerable<Categories> categories;
+    private IEnumerable<Categories> activeCategories;
+    private SubCategories currentSubCategory = new SubCategories();
+    private ViewMode currentView = ViewMode.List;
+    private ClaimsPrincipal user;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        user = authState.User;
+        await LoadSubCategories();
+    }
+
+    private async Task LoadSubCategories()
+    {
+        subcategories = await SubCategoryService.GetAllSubCategoriesAsync();
+        categories = await CategoryService.GetAllCategoriesAsync();
+        activeCategories = categories.Where(c => c.Active);
+    }
+
+    private void AddNewSubCategory()
+    {
+        currentSubCategory = new SubCategories();
+        currentView = ViewMode.Add;
+    }
+
+    private void EditSubCategory(int subcategoryId)
+    {
+        currentSubCategory = subcategories.FirstOrDefault(c => c.SubCategoryId == subcategoryId);
+        if (currentSubCategory != null)
+        {
+            currentView = ViewMode.Edit;
+        }
+    }
+
+    private async Task SaveChanges()
+    {
+        var username = user?.Identity?.Name ?? "Unknown";
+
+        if (currentView == ViewMode.Add)
+        {
+            currentSubCategory.CreateBy = username;
+            currentSubCategory.UpdateBy = username;
+            await SubCategoryService.InsertSubCategoryAsync(currentSubCategory);
+        }
+        else if (currentView == ViewMode.Edit)
+        {
+            currentSubCategory.UpdateBy = username;
+            await SubCategoryService.UpdateSubCategoryAsync(currentSubCategory);
+        }
+
+        await LoadSubCategories();
+        SwitchToViewMode(ViewMode.List);
+    }
+
+    private void Cancel()
+    {
+        SwitchToViewMode(ViewMode.List);
+    }
+
+    private void SwitchToViewMode(ViewMode mode)
+    {
+        currentView = mode;
+        if (mode == ViewMode.List)
+        {
+            currentSubCategory = new SubCategories(); // Reset current subcategory when switching back to list view
+        }
+    }
+
+    private string GetCategoryName(int categoryId)
+    {
+        var category = categories?.FirstOrDefault(c => c.CategoryId == categoryId);
+        return category?.CategoryName ?? "Unknown";
+    }
+
+    public enum ViewMode
+    {
+        List,
+        Add,
+        Edit
+    }
+}

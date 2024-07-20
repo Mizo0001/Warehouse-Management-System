@@ -1,0 +1,209 @@
+﻿@page "/products"
+@inject IProductService ProductService
+@inject ISubCategoryService SubCategoryService
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@using Microsoft.AspNetCore.Components.Authorization
+@using System.Security.Claims
+@using System.Collections.Generic
+@using System.Threading.Tasks
+
+<h3>Products</h3>
+
+<AuthorizeView>
+    <Authorized>
+        @if (currentView == ViewMode.List)
+        {
+            <button class="btn btn-success mb-3" @onclick="AddNewProduct">Add New Product</button>
+
+            @if (products == null)
+            {
+                <p><em>Loading...</em></p>
+            }
+            else
+            {
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>ProductID</th>
+                            <th>ProductName</th>
+                            <th>SubCategory</th>
+                            <th>Active</th>
+                            <th>Inactive Date</th>
+                            <th>Create By</th>
+                            <th>Create Date</th>
+                            <th>Update By</th>
+                            <th>Update Date</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var product in products)
+                        {
+                            <tr>
+                                <td>@product.ProductId</td>
+                                <td>@product.ProductName</td>
+                                <td>@GetSubCategoryName(product.SubCategoryId)</td>
+                                <td>@(product.Active ? "Yes" : "No")</td>
+                                <td>@product.InActiveDate?.ToString("yyyy-MM-dd")</td>
+                                <td>@product.CreateBy</td>
+                                <td>@product.CreateDate.ToString("yyyy-MM-dd")</td>
+                                <td>@product.UpdateBy</td>
+                                <td>@product.UpdateDate.ToString("yyyy-MM-dd")</td>
+                                <td>
+                                    <button class="btn btn-primary btn-sm" @onclick="() => EditProduct(product.ProductId)">Edit</button>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            }
+        }
+
+        @if (currentView == ViewMode.Add)
+        {
+            <h4>Add New Product</h4>
+
+            <div class="form-group">
+                <label for="productName">Product Name:</label>
+                <input class="form-control" id="productName" @bind="currentProduct.ProductName" />
+            </div>
+            <div class="form-group">
+                <label for="subcategoryDropdown">SubCategory:</label>
+                <select class="form-control" id="subcategoryDropdown" @bind="currentProduct.SubCategoryId">
+                    @if (activeSubCategories != null)
+                    {
+                        @foreach (var subcategory in activeSubCategories)
+                        {
+                            <option value="@subcategory.SubCategoryId">@subcategory.SubCategoryName</option>
+                        }
+                    }
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="active">Active:</label>
+                <input type="checkbox" id="active" @bind="currentProduct.Active" />
+            </div>
+            <div class="form-group">
+                <button class="btn btn-primary" @onclick="SaveChanges">Save</button>
+                <button class="btn btn-secondary ml-2" @onclick="Cancel">Cancel</button>
+            </div>
+        }
+        else if (currentView == ViewMode.Edit)
+        {
+            <h4>Edit Product</h4>
+
+            <div class="form-group">
+                <label for="productName">Product Name:</label>
+                <input class="form-control" id="productName" @bind="currentProduct.ProductName" />
+            </div>
+            <div class="form-group">
+                <label for="subcategoryDropdown">SubCategory:</label>
+                <select class="form-control" id="subcategoryDropdown" @bind="currentProduct.SubCategoryId">
+                    @if (activeSubCategories != null)
+                    {
+                        @foreach (var subcategory in activeSubCategories)
+                        {
+                            <option value="@subcategory.SubCategoryId">@subcategory.SubCategoryName</option>
+                        }
+                    }
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="active">Active:</label>
+                <input type="checkbox" id="active" @bind="currentProduct.Active" />
+            </div>
+            <div class="form-group">
+                <button class="btn btn-primary" @onclick="SaveChanges">Save</button>
+                <button class="btn btn-secondary ml-2" @onclick="Cancel">Cancel</button>
+            </div>
+        }
+    </Authorized>
+    <NotAuthorized>
+        <p>You must be logged in to access this page.</p>
+    </NotAuthorized>
+</AuthorizeView>
+
+@code {
+    private IEnumerable<Products> products;
+    private IEnumerable<SubCategories> subcategories;
+    private IEnumerable<SubCategories> activeSubCategories;
+    private Products currentProduct = new Products();
+    private ViewMode currentView = ViewMode.List;
+    private ClaimsPrincipal user;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        user = authState.User;
+        await LoadProducts();
+    }
+
+    private async Task LoadProducts()
+    {
+        products = await ProductService.GetAllProductsAsync();
+        subcategories = await SubCategoryService.GetAllSubCategoriesAsync();
+        activeSubCategories = subcategories.Where(c => c.Active);
+    }
+
+    private void AddNewProduct()
+    {
+        currentProduct = new Products();
+        currentView = ViewMode.Add;
+    }
+
+    private void EditProduct(int productId)
+    {
+        currentProduct = products.FirstOrDefault(p => p.ProductId == productId);
+        if (currentProduct != null)
+        {
+            currentView = ViewMode.Edit;
+        }
+    }
+
+    private async Task SaveChanges()
+    {
+        var username = user?.Identity?.Name ?? "Unknown";
+
+        if (currentView == ViewMode.Add)
+        {
+            currentProduct.CreateBy = username;
+            currentProduct.UpdateBy = username;
+            await ProductService.InsertProductAsync(currentProduct);
+        }
+        else if (currentView == ViewMode.Edit)
+        {
+            currentProduct.UpdateBy = username;
+            await ProductService.UpdateProductAsync(currentProduct);
+        }
+
+        await LoadProducts();
+        SwitchToViewMode(ViewMode.List);
+    }
+
+    private void Cancel()
+    {
+        SwitchToViewMode(ViewMode.List);
+    }
+
+    private void SwitchToViewMode(ViewMode mode)
+    {
+        currentView = mode;
+        if (mode == ViewMode.List)
+        {
+            currentProduct = new Products(); // Reset current product when switching back to list view
+        }
+    }
+
+    private string GetSubCategoryName(int subcategoryId)
+    {
+        var subcategory = subcategories?.FirstOrDefault(c => c.SubCategoryId == subcategoryId);
+        return subcategory?.SubCategoryName ?? "Unknown";
+    }
+
+    public enum ViewMode
+    {
+        List,
+        Add,
+        Edit
+    }
+}

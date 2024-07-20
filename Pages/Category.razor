@@ -1,0 +1,178 @@
+﻿@page "/categories"
+@inject ICategoryService CategoryService
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject NavigationManager Navigation
+@using Microsoft.AspNetCore.Components.Authorization
+@using System.Security.Claims
+@using System.Collections.Generic
+@using System.Threading.Tasks
+
+<h3>Categories</h3>
+
+<AuthorizeView>
+    <Authorized>
+        @if (currentView == ViewMode.List)
+        {
+            <button class="btn btn-success mb-3" @onclick="AddNewCategory">Add New Category</button>
+
+            @if (categories == null)
+            {
+                <p><em>Loading...</em></p>
+            }
+            else
+            {
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>CategoryID</th>
+                            <th>CategoryName</th>
+                            <th>Active</th>
+                            <th>Inactive Date</th>
+                            <th>Create By</th>
+                            <th>Create Date</th>
+                            <th>Update By</th>
+                            <th>Update Date</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var category in categories)
+                        {
+                            <tr>
+                                <td>@category.CategoryId</td>
+                                <td>@category.CategoryName</td>
+                                <td>@(category.Active ? "Yes" : "No")</td>
+                                <td>@category.InActiveDate?.ToString("yyyy-MM-dd")</td>
+                                <td>@category.CreateBy</td>
+                                <td>@category.CreateDate.ToString("yyyy-MM-dd")</td>
+                                <td>@category.UpdateBy</td>
+                                <td>@category.UpdateDate.ToString("yyyy-MM-dd")</td>
+                                <td>
+                                    <button class="btn btn-primary btn-sm" @onclick="() => EditCategory(category.CategoryId)">Edit</button>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            }
+        }
+
+        @if (currentView == ViewMode.Add)
+        {
+            <h4>Add New Category</h4>
+
+            <div class="form-group">
+                <label for="categoryName">Category Name:</label>
+                <input class="form-control" id="categoryName" @bind="currentCategory.CategoryName" />
+            </div>
+
+            <div class="form-group">
+                <label for="active">Active:</label>
+                <input type="checkbox" id="active" @bind="currentCategory.Active" />
+            </div>
+            <div class="form-group">
+                <button class="btn btn-primary" @onclick="SaveChanges">Save</button>
+                <button class="btn btn-secondary ml-2" @onclick="Cancel">Cancel</button>
+            </div>
+        }
+        else if (currentView == ViewMode.Edit)
+        {
+            <h4>Edit Category</h4>
+
+            <div class="form-group">
+                <label for="categoryName">Category Name:</label>
+                <input class="form-control" id="categoryName" @bind="currentCategory.CategoryName" />
+            </div>
+            <div class="form-group">
+                <label for="active">Active:</label>
+                <input type="checkbox" id="active" @bind="currentCategory.Active" />
+            </div>
+            <div class="form-group">
+                <button class="btn btn-primary" @onclick="SaveChanges">Save</button>
+                <button class="btn btn-secondary ml-2" @onclick="Cancel">Cancel</button>
+            </div>
+        }
+    </Authorized>
+    <NotAuthorized>
+        @* @{
+            var returnUrl = Navigation.ToBaseRelativePath(Navigation.Uri);
+            Navigation.NavigateTo($"login?returnUrl={Uri.EscapeDataString(returnUrl)}", true);
+        } *@
+        <p>You must be logged in to access this page.</p>
+    </NotAuthorized>
+</AuthorizeView>
+
+@code {
+    private IEnumerable<Categories> categories;
+    private Categories currentCategory = new Categories();
+    private ViewMode currentView = ViewMode.List;
+    private ClaimsPrincipal user;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        user = authState.User;
+        await LoadCategories();
+    }
+
+    private async Task LoadCategories()
+    {
+        categories = await CategoryService.GetAllCategoriesAsync();
+    }
+
+    private void AddNewCategory()
+    {
+        currentCategory = new Categories();
+        currentView = ViewMode.Add;
+    }
+
+    private void EditCategory(int categoryId)
+    {
+        currentCategory = categories.FirstOrDefault(c => c.CategoryId == categoryId);
+        if (currentCategory != null)
+        {
+            currentView = ViewMode.Edit;
+        }
+    }
+
+    private async Task SaveChanges()
+    {
+        var username = user?.Identity?.Name ?? "Unknown";
+
+        if (currentView == ViewMode.Add)
+        {
+            currentCategory.CreateBy = username;
+            currentCategory.UpdateBy = username;
+            await CategoryService.InsertCategoryAsync(currentCategory);
+        }
+        else if (currentView == ViewMode.Edit)
+        {
+            currentCategory.UpdateBy = username;
+            await CategoryService.UpdateCategoryAsync(currentCategory);
+        }
+
+        await LoadCategories();
+        SwitchToViewMode(ViewMode.List);
+    }
+
+    private void Cancel()
+    {
+        SwitchToViewMode(ViewMode.List);
+    }
+
+    private void SwitchToViewMode(ViewMode mode)
+    {
+        currentView = mode;
+        if (mode == ViewMode.List)
+        {
+            currentCategory = new Categories(); // Reset current category when switching back to list view
+        }
+    }
+
+    public enum ViewMode
+    {
+        List,
+        Add,
+        Edit
+    }
+}
