@@ -1,0 +1,43 @@
+﻿@page "/transactiontypes"
+@inject ITransactionTypeService TransactionTypeService
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@using Microsoft.AspNetCore.Components.Authorization
+@using Syncfusion.Blazor.Grids
+@using Syncfusion.Blazor.Inputs
+@using System.Security.Claims
+@using System.Collections.Generic
+@using System.Threading.Tasks
+<h3>TransactionType</h3>
+
+
+<AuthorizeView>
+    <Authorized>
+        <SfGrid DataSource="@transactiontypes"  TValue="TransactionTypes">
+            <GridEditSettings AllowAdding="true" AllowDeleting="true" AllowEditing="true" Mode="EditMode.Normal"></GridEditSettings>
+            <GridColumns>
+                <GridColumn Field="@nameof(TransactionTypes.TransactionTypeID)" HeaderText="TransactionTypeID ID" IsPrimaryKey="true" ValidationRules="@(new ValidationRules { Required = true })" TextAlign="TextAlign.Center" Width="120" AllowAdding="false" AllowEditing="false"></GridColumn>
+                <GridColumn Field="@nameof(TransactionTypes.TypeName)" HeaderText="Type Name" ValidationRules="@(new ValidationRules { Required = true })" Width="150" AllowAdding="false" AllowEditing="false"></GridColumn>
+                <GridColumn Field="@nameof(TransactionTypes.Change)" HeaderText="Change"  ValidationRules="@(new ValidationRules { Required = true })" TextAlign="TextAlign.Center" Width="120" AllowAdding="false" AllowEditing="false"></GridColumn>
+            </GridColumns>
+        </SfGrid>
+    </Authorized>
+    <NotAuthorized>
+        <p>You must be logged in to access this page.</p>
+    </NotAuthorized>
+</AuthorizeView>
+@code {
+    private IEnumerable<TransactionTypes> transactiontypes;
+    private ClaimsPrincipal user;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        user = authState.User;
+        await LoadTransactionTypes();
+    }
+
+    private async Task LoadTransactionTypes()
+    {
+        transactiontypes = await TransactionTypeService.GetAllTransactionTypeAsync();
+    }
+}

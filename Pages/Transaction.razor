@@ -1,0 +1,97 @@
+﻿@page "/transactions"
+@attribute [Authorize]
+@inject ITransactionService TransactionService
+@inject IProductService ProductService
+@inject ITransactionTypeService TransactionTypeService
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@using Microsoft.AspNetCore.Components.Authorization
+@using Syncfusion.Blazor.Grids
+@using Syncfusion.Blazor.Inputs
+@using System.Security.Claims
+@using System.Collections.Generic
+@using System.Threading.Tasks
+@using Syncfusion.Blazor.DropDowns
+@using Syncfusion.Blazor.Calendars
+@using Syncfusion.Blazor.Data
+
+
+<h3>Transactions</h3>
+
+<AuthorizeView>
+    <Authorized>
+        <SfGrid DataSource="@transactions" AllowFiltering="true" Toolbar="@(new List<string>() { "Add","Update" })" TValue="Transactions">
+            <GridEditSettings AllowAdding="true" AllowDeleting="true" AllowEditing="true" Mode="EditMode.Normal"></GridEditSettings>
+            <GridFilterSettings Type="Syncfusion.Blazor.Grids.FilterType.Menu"></GridFilterSettings>
+            <GridEvents TValue="Transactions" OnActionBegin="@(ActionBeginHandler)" OnActionComplete="@(ActionCompleteHandler)" ></GridEvents>
+            <GridColumns>
+                <GridColumn Field="@nameof(Transactions.TransactionID)" HeaderText="TransactionID" IsPrimaryKey="true" ValidationRules="@(new ValidationRules { Required = true })" TextAlign="TextAlign.Center" Width="120" AllowFiltering="false"AllowAdding="false" AllowEditing="false"></GridColumn>
+                <GridForeignColumn Field="@nameof(Transactions.ProductId)" HeaderText="Product Name" ForeignKeyValue="ProductName" ForeignDataSource="@activeProducts" Width="150" AllowFiltering="false" AllowEditing="false"></GridForeignColumn>
+                <GridForeignColumn Field="@nameof(Transactions.TransactionTypeID)" HeaderText="Type Name" ForeignKeyValue="TypeName" ForeignDataSource="@types" Width="150" AllowFiltering="false" AllowEditing="false"></GridForeignColumn>
+                <GridColumn Field="@nameof(Transactions.Quantity)" HeaderText="Quantity" ValidationRules="@(new ValidationRules { Required = true })" TextAlign="TextAlign.Center" Width="150" AllowFiltering="false" AllowEditing="false"></GridColumn>
+                <GridColumn Field="@nameof(Transactions.TransactionDate)" HeaderText="Transaction Date" Width="150" Format="yyyy-MM-dd" AllowFiltering="true" AllowEditing="false" AllowAdding="false"></GridColumn>
+                <GridColumn Field="@nameof(Transactions.CreateBy)" HeaderText="Create By" Width="150" AllowAdding="false" AllowEditing="false" AllowFiltering="false"></GridColumn>
+                <GridColumn Field="@nameof(Transactions.CreateDate)" HeaderText="Create Date" Format="yyyy-MM-dd" Width="150" AllowAdding="false" AllowEditing="false" AllowFiltering="false"></GridColumn>
+            </GridColumns>
+        </SfGrid>
+    </Authorized>
+    <NotAuthorized>
+        <p>You must be logged in to access this page.</p>
+    </NotAuthorized>
+</AuthorizeView>
+
+@code {
+    private IEnumerable<Transactions> transactions;
+    private IEnumerable<Products> products;
+    private IEnumerable<Products> activeProducts;
+    private IEnumerable<TransactionTypes> types;
+    private ClaimsPrincipal user;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        user = authState.User;
+        await LoadTransactions();
+        await LoadProducts();
+        await LoadTransactionTypes();
+    }
+
+    private async Task LoadTransactions()
+    {
+        transactions = await TransactionService.GetAllTransactionsAsync();
+    }
+
+    private async Task LoadProducts()
+    {
+        products = await ProductService.GetAllProductsAsync();
+        activeProducts = products.Where(c => c.Active).ToList();
+    }
+
+    private async Task LoadTransactionTypes()
+    {
+        types = await TransactionTypeService.GetAllTransactionTypeAsync();
+    }
+
+    public async void ActionBeginHandler(ActionEventArgs<Transactions> Args)
+    {
+        if (Args.RequestType.Equals(Syncfusion.Blazor.Grids.Action.Save))
+        {
+            var username = user?.Identity?.Name ?? "Unknown";
+            if (Args.Action == "Add" )
+            {
+                var transactionType = await TransactionTypeService.GetTransactionTypeByIdAsync(Args.Data.TransactionTypeID);
+                Args.Data.Quantity = Args.Data.Quantity * transactionType.Change;
+                Args.Data.CreateBy = username;
+                await TransactionService.InsertTransactionAsync(Args.Data);
+            }
+        }
+    }
+
+    public async void ActionCompleteHandler(ActionEventArgs<Transactions> Args)
+    {
+        if (Args.RequestType.Equals(Syncfusion.Blazor.Grids.Action.Save))
+        {
+            await LoadTransactions();
+            StateHasChanged();
+        }
+    }
+}

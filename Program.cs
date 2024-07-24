@@ -29,6 +29,8 @@ builder.Services.AddSingleton<ISqlDbContext, SqlDbContext>();
 builder.Services.AddScoped<ISubCategoryService, SubCategoryService>();
 builder.Services.AddSingleton<ICategoryService, CategoryService>();
 builder.Services.AddSingleton<IProductService, ProductService>();
+builder.Services.AddSingleton<ITransactionTypeService, TransactionTypeService>();
+builder.Services.AddSingleton<ITransactionService, TransactionService>();
 builder.Services.AddSyncfusionBlazor();
 Syncfusion.Licensing.SyncfusionLicenseProvider.RegisterLicense("Ngo9BigBOggjHTQxAR8/V1NCaF5cXmZCeUx0Qnxbf1x0ZFJMYlRbRn5PMyBoS35RckVkW39ed3ZdRGhVVUFz");
 
