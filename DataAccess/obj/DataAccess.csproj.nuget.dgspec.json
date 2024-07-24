@@ -54,6 +54,10 @@
               "target": "Package",
               "version": "[8.0.0, )"
             },
+            "Syncfusion.Blazor": {
+              "target": "Package",
+              "version": "[26.1.42, )"
+            },
             "System.Data.SqlClient": {
               "target": "Package",
               "version": "[4.8.6, )"
