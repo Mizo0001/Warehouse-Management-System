@@ -32,7 +32,7 @@ builder.Services.AddSingleton<IProductService, ProductService>();
 builder.Services.AddSingleton<ITransactionTypeService, TransactionTypeService>();
 builder.Services.AddSingleton<ITransactionService, TransactionService>();
 builder.Services.AddSyncfusionBlazor();
-Syncfusion.Licensing.SyncfusionLicenseProvider.RegisterLicense("Ngo9BigBOggjHTQxAR8/V1NCaF5cXmZCeUx0Qnxbf1x0ZFJMYlRbRn5PMyBoS35RckVkW39ed3ZdRGhVVUFz");
+Syncfusion.Licensing.SyncfusionLicenseProvider.RegisterLicense("MzM5MzgyN0AzMjM2MmUzMDJlMzBiV0RMbnJmRXFQWlRySUdEaG4zREQxTXdwYkdMWC9LcUllRVFKOTM0T0RJPQ==");
 
 
 

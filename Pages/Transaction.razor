@@ -3,6 +3,7 @@
 @inject ITransactionService TransactionService
 @inject IProductService ProductService
 @inject ITransactionTypeService TransactionTypeService
+@inject IJSRuntime JSRuntime
 @inject AuthenticationStateProvider AuthenticationStateProvider
 @using Microsoft.AspNetCore.Components.Authorization
 @using Syncfusion.Blazor.Grids
@@ -13,51 +14,69 @@
 @using Syncfusion.Blazor.DropDowns
 @using Syncfusion.Blazor.Calendars
 @using Syncfusion.Blazor.Data
-
+@using Syncfusion.Blazor.Notifications
 
 <h3>Transactions</h3>
 
 <AuthorizeView>
     <Authorized>
-        <SfGrid DataSource="@transactions" AllowFiltering="true" Toolbar="@(new List<string>() { "Add","Update" })" TValue="Transactions">
-            <GridEditSettings AllowAdding="true" AllowDeleting="true" AllowEditing="true" Mode="EditMode.Normal"></GridEditSettings>
-            <GridFilterSettings Type="Syncfusion.Blazor.Grids.FilterType.Menu"></GridFilterSettings>
-            <GridEvents TValue="Transactions" OnActionBegin="@(ActionBeginHandler)" OnActionComplete="@(ActionCompleteHandler)" ></GridEvents>
-            <GridColumns>
-                <GridColumn Field="@nameof(Transactions.TransactionID)" HeaderText="TransactionID" IsPrimaryKey="true" ValidationRules="@(new ValidationRules { Required = true })" TextAlign="TextAlign.Center" Width="120" AllowFiltering="false"AllowAdding="false" AllowEditing="false"></GridColumn>
-                <GridForeignColumn Field="@nameof(Transactions.ProductId)" HeaderText="Product Name" ForeignKeyValue="ProductName" ForeignDataSource="@activeProducts" Width="150" AllowFiltering="false" AllowEditing="false"></GridForeignColumn>
-                <GridForeignColumn Field="@nameof(Transactions.TransactionTypeID)" HeaderText="Type Name" ForeignKeyValue="TypeName" ForeignDataSource="@types" Width="150" AllowFiltering="false" AllowEditing="false"></GridForeignColumn>
-                <GridColumn Field="@nameof(Transactions.Quantity)" HeaderText="Quantity" ValidationRules="@(new ValidationRules { Required = true })" TextAlign="TextAlign.Center" Width="150" AllowFiltering="false" AllowEditing="false"></GridColumn>
-                <GridColumn Field="@nameof(Transactions.TransactionDate)" HeaderText="Transaction Date" Width="150" Format="yyyy-MM-dd" AllowFiltering="true" AllowEditing="false" AllowAdding="false"></GridColumn>
-                <GridColumn Field="@nameof(Transactions.CreateBy)" HeaderText="Create By" Width="150" AllowAdding="false" AllowEditing="false" AllowFiltering="false"></GridColumn>
-                <GridColumn Field="@nameof(Transactions.CreateDate)" HeaderText="Create Date" Format="yyyy-MM-dd" Width="150" AllowAdding="false" AllowEditing="false" AllowFiltering="false"></GridColumn>
-            </GridColumns>
-        </SfGrid>
+        <p>DateRangePicker StartDate and EndDate is: <strong>@startDate</strong> and <strong>@endDate</strong></p>
+        <SfDateRangePicker TValue="DateTime?" StartDate="@startDate" EndDate="@endDate">
+            <DateRangePickerEvents TValue="DateTime?" ValueChange="@onChange"></DateRangePickerEvents>
+        </SfDateRangePicker>
+        @if (transactions != null && transactions.Any())
+        {
+            <SfGrid DataSource="@transactions" AllowFiltering="true" Toolbar="@(new List<string>() { "Add","Update" })" TValue="Transactions">
+                <GridEditSettings AllowAdding="true" AllowDeleting="true" AllowEditing="true" Mode="EditMode.Normal"></GridEditSettings>
+                <GridFilterSettings Type="Syncfusion.Blazor.Grids.FilterType.Menu"></GridFilterSettings>
+                <GridEvents TValue="Transactions" OnActionBegin="@(ActionBeginHandler)" OnActionComplete="@(ActionCompleteHandler)"></GridEvents>
+                <GridColumns>
+                    <GridColumn Field="@nameof(Transactions.TransactionID)" HeaderText="TransactionID" IsPrimaryKey="true" ValidationRules="@(new ValidationRules { Required = true })" TextAlign="TextAlign.Center" Width="120" AllowFiltering="false" AllowAdding="false" AllowEditing="false"></GridColumn>
+                    <GridForeignColumn Field="@nameof(Transactions.ProductId)" HeaderText="Product Name" ForeignKeyValue="ProductName" ForeignDataSource="@activeProducts" Width="150" AllowFiltering="false" AllowEditing="false"></GridForeignColumn>
+                    <GridForeignColumn Field="@nameof(Transactions.TransactionTypeID)" HeaderText="Type Name" ForeignKeyValue="TypeName" ForeignDataSource="@types" Width="150" AllowFiltering="false" AllowEditing="false"></GridForeignColumn>
+                    <GridColumn Field="@nameof(Transactions.Quantity)" HeaderText="Quantity" ValidationRules="@(new ValidationRules { Required = true })" TextAlign="TextAlign.Center" Width="150" AllowFiltering="false" AllowEditing="false"></GridColumn>
+                    <GridColumn Field="@nameof(Transactions.TransactionDate)" HeaderText="Transaction Date" Width="150" Format="yyyy-MM-dd" AllowFiltering="false" AllowEditing="false" AllowAdding="false"></GridColumn>
+                    <GridColumn Field="@nameof(Transactions.CreateBy)" HeaderText="Create By" Width="150" AllowAdding="false" AllowEditing="false" AllowFiltering="false"></GridColumn>
+                    <GridColumn Field="@nameof(Transactions.CreateDate)" HeaderText="Create Date" Format="yyyy-MM-dd" Width="150" AllowAdding="false" AllowEditing="false" AllowFiltering="false"></GridColumn>
+                </GridColumns>
+            </SfGrid>
+        }
+        else
+        {
+            <p>No transactions to display. Please apply a date filter to see results.</p>
+        }
     </Authorized>
     <NotAuthorized>
         <p>You must be logged in to access this page.</p>
     </NotAuthorized>
 </AuthorizeView>
 
+<SfToast ID="toast_default" @ref="ToastObj">
+    <ToastPosition X="Right"></ToastPosition>
+</SfToast>
+
 @code {
-    private IEnumerable<Transactions> transactions;
+    private IEnumerable<Transactions> transactions = Enumerable.Empty<Transactions>();
     private IEnumerable<Products> products;
     private IEnumerable<Products> activeProducts;
     private IEnumerable<TransactionTypes> types;
     private ClaimsPrincipal user;
+    private DateTime? startDate { get; set; }
+    private DateTime? endDate { get; set; }
+    SfToast ToastObj;
+    private string ToastContent;
 
     protected override async Task OnInitializedAsync()
     {
         var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
         user = authState.User;
-        await LoadTransactions();
         await LoadProducts();
         await LoadTransactionTypes();
     }
 
     private async Task LoadTransactions()
     {
-        transactions = await TransactionService.GetAllTransactionsAsync();
+        transactions = await TransactionService.GetAllTransactionsAsync(startDate, endDate);
     }
 
     private async Task LoadProducts()
@@ -71,26 +90,52 @@
         types = await TransactionTypeService.GetAllTransactionTypeAsync();
     }
 
-    public async void ActionBeginHandler(ActionEventArgs<Transactions> Args)
+    private async void onChange(RangePickerEventArgs<DateTime?> args)
+    {
+        startDate = args.StartDate;
+        endDate = args.EndDate;
+        await LoadTransactions();
+        StateHasChanged();
+    }
+
+    public async Task ActionBeginHandler(ActionEventArgs<Transactions> Args)
     {
         if (Args.RequestType.Equals(Syncfusion.Blazor.Grids.Action.Save))
         {
             var username = user?.Identity?.Name ?? "Unknown";
-            if (Args.Action == "Add" )
+            var transactionType = await TransactionTypeService.GetTransactionTypeByIdAsync(Args.Data.TransactionTypeID);
+            var product = products.FirstOrDefault(p => p.ProductId == Args.Data.ProductId);
+
+            if (transactionType != null && product != null)
             {
-                var transactionType = await TransactionTypeService.GetTransactionTypeByIdAsync(Args.Data.TransactionTypeID);
-                Args.Data.Quantity = Args.Data.Quantity * transactionType.Change;
-                Args.Data.CreateBy = username;
-                await TransactionService.InsertTransactionAsync(Args.Data);
+                int changeMultiplier = transactionType.Change;
+                if (transactionType.TypeName == "Out" && product.Balance < Args.Data.Quantity)
+                {
+                    Args.Cancel = true;
+                    ToastContent = "Insufficient balance for this transaction.";
+                    await Task.Delay(100);
+                    await ToastObj.ShowAsync(new ToastModel { Title = "Transaction Error", Content = "Insufficient Balance!", CssClass = "e-toast-warning" });
+                    return;
+                }
+
+                else if (Args.Action == "Add")
+                {
+                    Args.Data.CreateBy = username;
+                    await TransactionService.InsertTransactionAsync(Args.Data);
+                    await ProductService.UpdateProductAsync(product);
+                    ToastContent = "Transaction added successfully.";
+                    await Task.Delay(100);
+                    await ToastObj.ShowAsync(new ToastModel { Title = "Transaction Success", Content = "Transaction added successfully!", CssClass = "e-toast-success" });
+                }
             }
         }
     }
 
-    public async void ActionCompleteHandler(ActionEventArgs<Transactions> Args)
+    public async Task ActionCompleteHandler(ActionEventArgs<Transactions> Args)
     {
         if (Args.RequestType.Equals(Syncfusion.Blazor.Grids.Action.Save))
         {
-            await LoadTransactions();
+            await LoadTransactions(); // Reload transactions to reflect changes
             StateHasChanged();
         }
     }
