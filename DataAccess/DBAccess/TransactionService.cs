@@ -18,17 +18,26 @@ namespace DataAccess.DBAccess
         {
             _dbContext = dbContext;
         }
-        public async Task<IEnumerable<Transactions>> GetAllTransactionsAsync()
+        public async Task<IEnumerable<Transactions>> GetAllTransactionsAsync(DateTime? startDate, DateTime? endDate)
         {
             _dbContext.SetConnectionString("DefaultConnection");
             var storedProcedureName = "GetAllTransactions";
+
             using (var connection = _dbContext.CreateConnection())
             {
-                var results = await connection.QueryAsync<Transactions>(storedProcedureName, new { }
-                , commandType: CommandType.StoredProcedure);
+                var parameters = new
+                {
+                    StartDate = startDate,
+                    EndDate = endDate
+                };
+
+                // Call stored procedure with parameters for filtering
+                var results = await connection.QueryAsync<Transactions>(storedProcedureName, parameters, commandType: CommandType.StoredProcedure);
                 return results;
             }
         }
+
+
         public async Task<int> InsertTransactionAsync(Transactions transaction)
         {
             _dbContext.SetConnectionString("DefaultConnection");

@@ -17,5 +17,6 @@ namespace DataAccess.Models
         public DateTime CreateDate { get; set; }
         public string UpdateBy { get; set; }
         public DateTime UpdateDate { get; set; }
+        public int Balance { get; set; }
     }
 }
