@@ -42,6 +42,10 @@ build_metadata.AdditionalFiles.CssScope =
 build_metadata.AdditionalFiles.TargetPath = UGFnZXNcUHJvZHVjdC5yYXpvcg==
 build_metadata.AdditionalFiles.CssScope = 
 
+[C:/Users/Legion/source/repos/WareHouseSol/WareHouse/Pages/ProductDetail.razor]
+build_metadata.AdditionalFiles.TargetPath = UGFnZXNcUHJvZHVjdERldGFpbC5yYXpvcg==
+build_metadata.AdditionalFiles.CssScope = 
+
 [C:/Users/Legion/source/repos/WareHouseSol/WareHouse/Pages/SubCategory.razor]
 build_metadata.AdditionalFiles.TargetPath = UGFnZXNcU3ViQ2F0ZWdvcnkucmF6b3I=
 build_metadata.AdditionalFiles.CssScope = 

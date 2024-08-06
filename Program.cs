@@ -31,6 +31,7 @@ builder.Services.AddSingleton<ICategoryService, CategoryService>();
 builder.Services.AddSingleton<IProductService, ProductService>();
 builder.Services.AddSingleton<ITransactionTypeService, TransactionTypeService>();
 builder.Services.AddSingleton<ITransactionService, TransactionService>();
+builder.Services.AddSingleton<IProductDetailsService, ProductDetailsService>();
 builder.Services.AddSyncfusionBlazor();
 Syncfusion.Licensing.SyncfusionLicenseProvider.RegisterLicense("MzM5MzgyN0AzMjM2MmUzMDJlMzBiV0RMbnJmRXFQWlRySUdEaG4zREQxTXdwYkdMWC9LcUllRVFKOTM0T0RJPQ==");
 

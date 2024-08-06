@@ -1,0 +1,84 @@
+﻿ @page "/productdetails"
+    @inject IProductDetailsService ProductDetailsService
+    @inject IProductService ProductService
+    @inject AuthenticationStateProvider AuthenticationStateProvider
+    @using Microsoft.AspNetCore.Components.Authorization
+    @using Syncfusion.Blazor.Grids
+    @using Syncfusion.Blazor.Inputs
+    @using System.Security.Claims
+    @using System.Collections.Generic
+    @using System.Threading.Tasks
+<h3>Product Details</h3>
+
+
+<AuthorizeView>
+    <Authorized>
+        @if (products != null)
+        {
+            <SfGrid DataSource="@productdetails" Toolbar="@(new List<string>() { "Add", "Cancel", "Update" })" TValue="ProductDetails">
+                <GridEditSettings AllowAdding="true" AllowDeleting="true" AllowEditing="true" Mode="EditMode.Normal"></GridEditSettings>
+                <GridEvents TValue="ProductDetails" OnActionBegin="@(ActionBeginHandler)" OnActionComplete="@(ActionCompleteHandler)"></GridEvents>
+                <GridColumns>
+                    <GridColumn Field="@nameof(ProductDetails.DetailID)" HeaderText="Detail ID" IsPrimaryKey="true" ValidationRules="@(new ValidationRules { Required = true })" TextAlign="TextAlign.Center" Width="120" AllowAdding="false" AllowEditing="false"></GridColumn>
+                    <GridForeignColumn Field="@nameof(ProductDetails.ProductId)" HeaderText="ProductName" ForeignKeyValue="ProductName" ForeignDataSource="@activeProducts" Width="150"></GridForeignColumn>
+                    <GridColumn Field="@nameof(ProductDetails.ExpiryDate)" HeaderText="Expiry Date" Type="ColumnType.DateTime" Format="yyyy-MM-dd" Width="150" AllowAdding="true" AllowEditing="false"></GridColumn>
+                    <GridColumn Field="@nameof(ProductDetails.Balance)" HeaderText="Balance" ValidationRules="@(new ValidationRules { Required = true })" TextAlign="TextAlign.Center" Width="150" AllowFiltering="false" AllowEditing="false"></GridColumn>
+                    <GridColumn Field="@nameof(ProductDetails.CreateBy)" HeaderText="Create By" Width="150" AllowEditing="false" AllowAdding="false"></GridColumn>
+                    <GridColumn Field="@nameof(ProductDetails.CreateDate)" HeaderText="Create Date" Width="150" Format="yyyy-MM-dd" AllowEditing="false" AllowAdding="false"></GridColumn>
+                    <GridColumn Field="@nameof(ProductDetails.UpdateBy)" HeaderText="Update By" Width="150" AllowEditing="false" AllowAdding="false"></GridColumn>
+                    <GridColumn Field="@nameof(ProductDetails.UpdateDate)" HeaderText="Update Date" Width="150" Format="yyyy-MM-dd" AllowEditing="false" AllowAdding="false"></GridColumn>
+                </GridColumns>
+            </SfGrid>
+
+        }
+    </Authorized>
+    <NotAuthorized>
+        <p>You must be logged in to access this page.</p>
+    </NotAuthorized>
+</AuthorizeView>
+@code {
+    private IEnumerable<ProductDetails> productdetails;
+    private IEnumerable<Products> products;
+    private IEnumerable<Products> activeProducts;
+    private ClaimsPrincipal user;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        user = authState.User;
+        await LoadProductDetails();
+        await LoadProducts();
+    }
+    private async Task LoadProductDetails()
+    {
+        productdetails = await ProductDetailsService.GetAllProductDetailsAsync();
+    }
+    private async Task LoadProducts()
+    {
+        products = await ProductService.GetAllProductsAsync();
+        activeProducts = products.Where(c => c.Active).ToList();
+    }
+
+
+    public void ActionBeginHandler(ActionEventArgs<ProductDetails> Args)
+    {
+        if (Args.RequestType.Equals(Syncfusion.Blazor.Grids.Action.Save))
+        {
+            var username = user?.Identity?.Name ?? "Unknown";
+            if (Args.Action == "Add")
+            {
+                Args.Data.CreateBy = username;
+                ProductDetailsService.InsertProductDetailsAsync(Args.Data);
+            }
+        }
+    }
+
+    public async void ActionCompleteHandler(ActionEventArgs<ProductDetails> Args)
+    {
+        if (Args.RequestType.Equals(Syncfusion.Blazor.Grids.Action.Save))
+        {
+            await LoadProductDetails();
+            StateHasChanged();
+        }
+    }
+    }
