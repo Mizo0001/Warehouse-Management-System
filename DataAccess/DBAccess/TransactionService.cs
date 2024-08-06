@@ -30,8 +30,6 @@ namespace DataAccess.DBAccess
                     StartDate = startDate,
                     EndDate = endDate
                 };
-
-                // Call stored procedure with parameters for filtering
                 var results = await connection.QueryAsync<Transactions>(storedProcedureName, parameters, commandType: CommandType.StoredProcedure);
                 return results;
             }
@@ -49,7 +47,8 @@ namespace DataAccess.DBAccess
                     transaction.ProductId,
                     transaction.TransactionTypeID,
                     transaction.Quantity,
-                    transaction.CreateBy
+                    transaction.CreateBy,
+                    transaction.ExpiryDate
                 }
                 , commandType: CommandType.StoredProcedure);
                 return results;
